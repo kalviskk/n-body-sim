@@ -1,7 +1,6 @@
 import numpy as np
 
 
-# kaut kas negāja ar dtype, tāpēc forcoju visiem float64
 class Particle:
     def __init__(self, position, velocity, mass, radius, color):
         self.position = np.array(position, dtype=np.float64)

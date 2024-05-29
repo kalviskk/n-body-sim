@@ -1,8 +1,8 @@
-# %%
 import subprocess
 
 
 def generateMP4():
+    # Generate a video from simulation images using ffmpeg
     subprocess.run(
         [
             "ffmpeg",
@@ -24,5 +24,5 @@ def generateMP4():
     )
 
 
-# ir iespēja atsevišķi ģenerēt video, palaižot šo failu
+# Generate the video when the script is run
 generateMP4()

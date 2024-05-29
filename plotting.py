@@ -26,9 +26,7 @@ def drawStep(particles, step, fig, ax, height, width):
     ax.set_facecolor("black")
     fig.patch.set_facecolor("black")
     ax.set_aspect("equal", "box")
-    ax.set_title(
-        f"Step {step}", pad=-10, color="white"
-    )  # Optional: set title color to white and move closer to the plot
+    ax.set_title(f"Step {step}", pad=-10, color="white")
 
     # Save the figure
     fig.savefig(

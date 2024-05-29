@@ -1,7 +1,7 @@
 import os
 
 
-# Izveidojam mapi, ja tāadas nav un sākumā izdzēšam visus attēlus, lai netraucē vecie, ja izvēlamies mazāku simulācijas ilgumu
+# Empty the specified directory by deleting all files within it
 def empty_directory(directory):
     if not os.path.exists(directory):
         os.makedirs(directory)
@@ -12,4 +12,5 @@ def empty_directory(directory):
                 os.unlink(file_path)
 
 
+# Clear the simulation directory
 empty_directory("simulation")
