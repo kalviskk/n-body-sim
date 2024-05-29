@@ -38,7 +38,7 @@ Implements the Barnes-Hut tree-based algorithm for efficient computation of grav
 
 ## How to Run
 
-1. **Setup**: Ensure you have Python installed along with the necessary libraries (`numpy`, `matplotlib`, `cmocean`, `ffmpeg`, `pickle`).
+1. **Setup**: Ensure you have Python installed along with the necessary libraries (`numpy`, `matplotlib`, `cmocean`, `ffmpeg`).
 
 2. **Run Simulation**: Execute the `main.py` script.
    ```sh
