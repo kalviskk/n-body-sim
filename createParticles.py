@@ -81,22 +81,3 @@ def createParticles(
             Particle(pos_e, np.array([0, 1]) * velocity_e, mass_e, 0.1, "green"),
         ]
         return particles
-
-    if distribution == "three":
-        particle_mass = 100
-        pos_A = np.random.rand(2) * np.array([width, height])
-        pos_B = np.random.rand(2) * np.array([width, height])
-        pos_C = np.random.rand(2) * np.array([width, height])
-
-        # Initial velocities to achieve a figure-8 shape
-        vel_A = np.random.rand(2) * 0
-        vel_B = np.random.rand(2) * 0
-        vel_C = np.random.rand(2) * 0
-
-        particles = [
-            Particle(pos_A, vel_A, particle_mass, particle_radius, "red"),
-            Particle(pos_B, vel_B, particle_mass, particle_radius, "blue"),
-            Particle(pos_C, vel_C, particle_mass, particle_radius, "green"),
-        ]
-
-        return particles

@@ -10,7 +10,7 @@ def generateMP4():
             "-framerate",
             "30",
             "-i",
-            "simulation3/step%05d.png",
+            "simulation/step%05d.png",
             "-c:v",
             "libx264",
             "-r",

@@ -32,7 +32,7 @@ def drawStep(particles, step, fig, ax, height, width):
 
     # Save the figure
     fig.savefig(
-        f"simulation/step{int(step/2):05d}.png",
+        f"simulation/step{int(step/10):05d}.png",
         dpi=300,
         bbox_inches="tight",
         pad_inches=0,
