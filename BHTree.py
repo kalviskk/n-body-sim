@@ -1,138 +1,176 @@
+# this is taken from https://github.com/Gongure/n-body-simulation-methods/blob/main/treebasedalgorithm.py
+# I had difficulties to create my own implementation of barnes-hut algorithm
+# so I edited Gongures code to work for my program, but all credit goes to the creator https://github.com/Gongure/n-body-simulation-methods/commits?author=Gongure
+import copy
 import numpy as np
-from numba import njit
-from collections import deque
+from Particle import Particle
+
+G = 1
 
 
-@njit
-def calculate_force_numba(
-    body_position, body_mass, bodies_positions, bodies_masses, G=0.01
-):
-    force = np.zeros(2)
-    for i in range(len(bodies_positions)):
-        r_ij = bodies_positions[i] - body_position
-        distance = np.linalg.norm(r_ij)
-        if distance > 0:  # Avoid division by zero
-            force += G * body_mass * bodies_masses[i] * r_ij / distance**3
-    return force
+# Create a class for nodes in the tree
+class Node:
+    def __init__(self):
+        self.children = None
+        self.mass = None
+        self.center_of_mass = None
+        self.bbox = None
 
 
-class BHTree:
-    def __init__(self, x_min, x_max, y_min, y_max):
-        self.x_min = x_min
-        self.x_max = x_max
-        self.y_min = y_min
-        self.y_max = y_max
-        self.center_of_mass = np.zeros(2)
-        self.total_mass = 0
-        self.body = None
-        self.quadrants = [None, None, None, None]  # NW, NE, SW, SE
+def tree_based_algorithm(particles, input_theta):
+    global theta
+    theta = input_theta
 
-    def insert(self, body):
-        if self.body is None and all(q is None for q in self.quadrants):
-            self.body = body
-            self.center_of_mass = body.position
-            self.total_mass = body.mass
-        else:
-            if self.body is not None:
-                self.subdivide()
-                self.insert_body_into_quadrant(self.body)
-                self.body = None
-            self.insert_body_into_quadrant(body)
+    root = Node()
+    root.bbox = find_root_bbox([body.position for body in particles])
 
-            self.total_mass += body.mass
-            self.center_of_mass = (
-                (self.center_of_mass * (self.total_mass - body.mass))
-                + body.position * body.mass
-            ) / self.total_mass
+    global current_boxes
+    current_boxes = [root.bbox]
 
-    def insert_body_into_quadrant(self, body):
-        quadrant_index = self.get_quadrant_index(body.position)
-        if self.quadrants[quadrant_index] is None:
-            x_mid = (self.x_min + self.x_max) / 2
-            y_mid = (self.y_min + self.y_max) / 2
-            if quadrant_index == 0:
-                self.quadrants[0] = BHTree(self.x_min, x_mid, y_mid, self.y_max)
-            elif quadrant_index == 1:
-                self.quadrants[1] = BHTree(x_mid, self.x_max, y_mid, self.y_max)
-            elif quadrant_index == 2:
-                self.quadrants[2] = BHTree(self.x_min, x_mid, self.y_min, y_mid)
-            elif quadrant_index == 3:
-                self.quadrants[3] = BHTree(x_mid, self.x_max, self.y_min, y_mid)
-        self.quadrants[quadrant_index].insert(body)
+    for body in particles:
+        m = copy.deepcopy(body.mass)
+        p = copy.deepcopy(body.position)
+        insert_in_tree(root, p, m)
 
-    def subdivide(self):
-        x_mid = (self.x_min + self.x_max) / 2
-        y_mid = (self.y_min + self.y_max) / 2
-        self.quadrants[0] = BHTree(self.x_min, x_mid, y_mid, self.y_max)
-        self.quadrants[1] = BHTree(x_mid, self.x_max, y_mid, self.y_max)
-        self.quadrants[2] = BHTree(self.x_min, x_mid, self.y_min, y_mid)
-        self.quadrants[3] = BHTree(x_mid, self.x_max, self.y_min, y_mid)
+    return root
 
-    def get_quadrant_index(self, position):
-        x, y = position
-        x_mid = (self.x_min + self.x_max) / 2
-        y_mid = (self.y_min + self.y_max) / 2
-        if x < x_mid and y >= y_mid:
-            return 0
-        elif x >= x_mid and y >= y_mid:
-            return 1
-        elif x < x_mid and y < y_mid:
-            return 2
-        else:
-            return 3
 
-    def calculate_force(self, body, theta=1.5, G=0.01):
-        force = np.zeros(2)
-        stack = deque([self])
+def insert_in_tree(node, body_position, body_mass):
+    global current_boxes
+    if node.mass is None:
+        node.mass = copy.deepcopy(body_mass)
+        node.center_of_mass = copy.deepcopy(body_position)
+        return
 
-        while stack:
-            node = stack.pop()
-            if node.body is not None and node.body is not body:
-                r_ij = node.body.position - body.position
-                distance = np.linalg.norm(r_ij)
-                if distance > 0:  # Avoid division by zero
-                    force += G * body.mass * node.body.mass * r_ij / distance**3
-            elif any(q is not None for q in node.quadrants):
-                s = node.x_max - node.x_min
-                d = np.linalg.norm(node.center_of_mass - body.position)
-                if s / d < theta:
-                    if d > 0:  # Avoid division by zero
-                        r_ij = node.center_of_mass - body.position
-                        force += G * body.mass * node.total_mass * r_ij / d**3
-                else:
-                    for quadrant in node.quadrants:
-                        if quadrant is not None:
-                            stack.append(quadrant)
-
-        return force
-
-    def calculate_all_forces(self, particles, G=0.01, theta=0.5):
-        positions = np.array([p.position for p in particles])
-        masses = np.array([p.mass for p in particles])
-        forces = np.zeros((len(particles), 2))
-
-        for i, body in enumerate(particles):
-            forces[i] = calculate_force_numba(
-                body.position, body.mass, positions, masses, G
-            )
-
-        return forces
-
-    def plot(self, ax):
-        # Plotting the rectangular regions
-        ax.plot(
-            [self.x_min, self.x_min, self.x_max, self.x_max, self.x_min],
-            [self.y_min, self.y_max, self.y_max, self.y_min, self.y_min],
-            "g-",
-            linewidth=1,
+    elif node.children is not None:
+        node.center_of_mass = copy.deepcopy(
+            (node.center_of_mass * node.mass + body_position * body_mass)
+            / (node.mass + body_mass)
         )
-        # Adding a body to ax
-        if self.body is not None:
-            ax.scatter(self.body.position[0], self.body.position[1], color="white", s=3)
+        node.mass += copy.deepcopy(body_mass)
+        quadrant = get_quadrant(node.bbox, copy.deepcopy(body_position))
+        if node.children[quadrant] is None:
+            node.children[quadrant] = Node()
+            node.children[quadrant].bbox = find_bbox(node.bbox, quadrant)
+            current_boxes.append(node.children[quadrant].bbox)
+        insert_in_tree(
+            node.children[quadrant],
+            copy.deepcopy(body_position),
+            copy.deepcopy(body_mass),
+        )
+        return
 
-        ax.set_facecolor("black")  # Black background
+    elif node.children is None:
+        node.children = [None, None, None, None]
 
-        # Plotting the quadrants
-        for quadrant in self.quadrants:
-            if quadrant is not None:
-                quadrant.plot(ax)
+        old_quadrant = get_quadrant(node.bbox, node.center_of_mass)
+        new_quadrant = get_quadrant(node.bbox, body_position)
+
+        node.children[old_quadrant] = Node()
+        node.children[old_quadrant].bbox = find_bbox(node.bbox, old_quadrant)
+
+        current_boxes.append(node.children[old_quadrant].bbox)
+
+        if new_quadrant != old_quadrant:
+            node.children[new_quadrant] = Node()
+            node.children[new_quadrant].bbox = find_bbox(node.bbox, new_quadrant)
+            current_boxes.append(node.children[new_quadrant].bbox)
+
+        insert_in_tree(
+            node.children[old_quadrant],
+            copy.deepcopy(node.center_of_mass),
+            copy.deepcopy(node.mass),
+        )
+        insert_in_tree(
+            node.children[new_quadrant],
+            copy.deepcopy(body_position),
+            copy.deepcopy(body_mass),
+        )
+
+        node.center_of_mass = copy.deepcopy(
+            (node.center_of_mass * node.mass + body_position * body_mass)
+            / (node.mass + body_mass)
+        )
+        node.mass += copy.deepcopy(body_mass)
+        return
+
+
+def calculate_force_for_tree(node, body_position, mass):
+    if node.mass == mass:
+        return np.zeros(2, dtype=np.float64)
+
+    elif node.children is None:
+        resulting_force = calculate_gravity(
+            node.center_of_mass, body_position, node.mass, mass
+        )
+        return resulting_force
+
+    else:
+        s = np.linalg.norm(node.bbox[1][0] - node.bbox[0][0])
+        d = np.linalg.norm(body_position - node.center_of_mass)
+        if s / d < theta:
+            resulting_force = calculate_gravity(
+                node.center_of_mass, body_position, node.mass, mass
+            )
+            return resulting_force
+        else:
+            resulting_force = np.zeros(2, dtype=np.float64)
+
+            for child in node.children:
+                if child is not None:
+                    resulting_force += calculate_force_for_tree(
+                        child, body_position, mass
+                    )
+            return resulting_force
+
+
+########################## Helper functions ##########################
+
+
+def calculate_gravity(other_body_position, body_position, other_body_mass, body_mass):
+    connection_vector = other_body_position - body_position
+    distance = np.linalg.norm(connection_vector)
+    direction = connection_vector / distance
+    force = G * (body_mass * other_body_mass) / (distance**2)
+    resulting_force = force * direction
+    return resulting_force
+
+
+def find_root_bbox(array_of_positions):
+    min_x = min(array_of_positions, key=lambda x: x[0])[0]
+    max_x = max(array_of_positions, key=lambda x: x[0])[0]
+    min_y = min(array_of_positions, key=lambda x: x[1])[1]
+    max_y = max(array_of_positions, key=lambda x: x[1])[1]
+    max_diff = max(max_x - min_x, max_y - min_y)
+    center = np.array([min_x, min_y]) + np.array([max_x - min_x, max_y - min_y]) / 2
+    cmin = center - np.array([max_diff, max_diff]) / 2
+    cmax = center + np.array([max_diff, max_diff]) / 2
+    return [cmin, cmax]
+
+
+def get_quadrant(bbox, position):
+    cmin = bbox[0]
+    cmax = bbox[1]
+    a = 0
+    s = cmax[0] - cmin[0]
+    if position[0] > s / 2 + cmin[0]:
+        a = 1
+    if position[1] > s / 2 + cmin[1]:
+        a += 2
+    return a
+
+
+def find_bbox(bbox, quadrant):
+    cmin = bbox[0]
+    cmax = bbox[1]
+    x = (cmax[0] - cmin[0]) / 2
+    y = (cmax[1] - cmin[1]) / 2
+    center = cmin + np.array([x, y])
+    if quadrant == 0:
+        return [cmin, center]
+    elif quadrant == 1:
+        return [np.array([center[0], cmin[1]]), np.array([cmax[0], center[1]])]
+    elif quadrant == 2:
+        return [np.array([cmin[0], center[1]]), np.array([center[0], cmax[1]])]
+    elif quadrant == 3:
+        return [center, cmax]

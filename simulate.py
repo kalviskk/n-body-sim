@@ -1,24 +1,25 @@
 import matplotlib.pyplot as plt
 from calc_accelerations import calculate_accelerations
 from plotting import drawStep
-from BHTree import BHTree
+from BHTree import *
+from saving import save_particles
 
 
-def simulate(particles, G, dt, steps, height, width):
+def simulate(particles, dt, steps, height, width):
     fig, ax = plt.subplots()
     for step in range(int(steps)):
-        # saglabāsim tikai katru piekto, lai paātrinātu darbību, bet turētu dt mazu
-        if not step % 10:
+        if not step % 2:
             drawStep(particles, step, fig, ax, height, width)
-        accelerations = calculate_accelerations(particles, G)
+
+        accelerations = calculate_accelerations(particles)
         for i, particle in enumerate(particles):
             particle.update_velocity(accelerations[i], dt)
 
-        # collisions?
-
-        # detect_and_handle_collisions(particles, height, width)
-
         for particle in particles:
             particle.update_position(dt)
-        if step != 0 and step % (steps // 10) == 0:
+
+        if step != 0 and step % (steps // 100) == 0:
             print(f"{(step / steps) * 100:.1f}%")
+
+    # Ensure particles are saved at the end of the simulation
+    save_particles(particles)

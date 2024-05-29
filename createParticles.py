@@ -5,24 +5,25 @@ import cmocean
 
 
 def createParticles(
-    N, height, width, G, ring_radius, central_mass, distribution="ring"
+    N, height, width, G, ring_radius=600, central_mass=1, distribution="ring"
 ):
     particles = []
     particle_mass = 1  # Much smaller than the central mass
-    particle_radius = 0.05
-    central_mass = 1000
+    particle_radius = 0.01
+    central_mass = 10000
     center = np.array([height / 2, width / 2])
 
     if distribution == "ring":
         colormap = cmocean.cm.phase
         for _ in range(N):
             angle = np.random.rand() * 2 * np.pi
-            radius = np.random.rand() * ring_radius + 5 * ring_radius
+            radius = np.random.rand() * ring_radius + 5 * ring_radius * 0.1
             position = center + np.array([np.cos(angle), np.sin(angle)]) * radius
 
             # Calculate velocity for a circular orbit
             c_distance = np.linalg.norm(position - center)
-            orbital_velocity = np.sqrt(G * central_mass / c_distance) * 0
+            v_var = (np.random.rand() * 0.2) - 0.2  # velocity variation
+            orbital_velocity = np.sqrt(G * central_mass / c_distance) * (1 + v_var)
             velocity_direction = np.array(
                 [-np.sin(angle), np.cos(angle)]
             )  # Perpendicular to radius
@@ -38,7 +39,9 @@ def createParticles(
             )
 
         # Adding the central massive object
-        # particles.append(Particle(center, np.array([0, 0]), central_mass, 0.01, "white"))
+        particles.append(
+            Particle(center, np.array([0, 0]), central_mass, 0.01, "white")
+        )
 
         return particles
     if distribution == "uniform":
@@ -61,5 +64,39 @@ def createParticles(
             particles.append(
                 Particle(position, velocity, particle_mass, particle_radius, color)
             )
+
+        return particles
+
+    if distribution == "two":
+        pos_S = center
+        pos_e = np.array([width, height / 2])
+
+        mass_S = 10000
+        mass_e = 1
+        distance = np.linalg.norm(pos_S - pos_e)
+        velocity_e = np.sqrt(G * mass_S / distance) * 0.8
+
+        particles = [
+            Particle(pos_S, np.array([0, 0]), mass_S, 0.1, "ivory"),
+            Particle(pos_e, np.array([0, 1]) * velocity_e, mass_e, 0.1, "green"),
+        ]
+        return particles
+
+    if distribution == "three":
+        particle_mass = 100
+        pos_A = np.random.rand(2) * np.array([width, height])
+        pos_B = np.random.rand(2) * np.array([width, height])
+        pos_C = np.random.rand(2) * np.array([width, height])
+
+        # Initial velocities to achieve a figure-8 shape
+        vel_A = np.random.rand(2) * 0
+        vel_B = np.random.rand(2) * 0
+        vel_C = np.random.rand(2) * 0
+
+        particles = [
+            Particle(pos_A, vel_A, particle_mass, particle_radius, "red"),
+            Particle(pos_B, vel_B, particle_mass, particle_radius, "blue"),
+            Particle(pos_C, vel_C, particle_mass, particle_radius, "green"),
+        ]
 
         return particles

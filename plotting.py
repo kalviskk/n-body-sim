@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 def drawStep(particles, step, fig, ax, height, width):
     fig.clf()  # Clear the figure
     ax = fig.add_subplot(111)
-    ax.set_xlim(-width * 4, width * 5)
-    ax.set_ylim(-height * 4, height * 5)
+    ax.set_xlim(-width * 5, width * 6)
+    ax.set_ylim(-height * 5, height * 6)
 
     # Plot particles
     for particle in particles:
@@ -32,7 +32,7 @@ def drawStep(particles, step, fig, ax, height, width):
 
     # Save the figure
     fig.savefig(
-        f"simulation/step{int(step/10):05d}.png",
+        f"simulation/step{int(step/2):05d}.png",
         dpi=300,
         bbox_inches="tight",
         pad_inches=0,
